@@ -545,7 +545,7 @@ class RelationshipPlugin(Star):
         register(f"/{PLUGIN_NAME}/relationship/lock", self.api_lock, ["POST"], "切换字段锁定")
         register(f"/{PLUGIN_NAME}/relationship/add", self.api_add, ["POST"], "新增用户行")
         register(f"/{PLUGIN_NAME}/relationship/delete", self.api_delete, ["POST"], "删除用户行")
-        register(f"/{PLUGIN_NAME}/relationship/force_inject", self.api_force_inject, ["POST"], "强制刷新注入")
+        register(f"/{PLUGIN_NAME}/relationship/force_inject", self.api_force_inject, ["POST"], "手动注入")
 
     async def api_get_all(self):
         try:
