@@ -500,7 +500,8 @@ class RelationshipPlugin(Star):
         lines = [
             f"{REL_MARKER}",
             "已填写的内容优先级高于默认规则。",
-            "你可以通过 update_relationship 工具自主维护以下关系表。",
+            "你可以通过add_user以及update_relationship 工具自主维护以下关系表。遇到不认识的用户发言频率较高时自动使用add_user和update_relationship 工具更新关系本",
+            "主人要求更新和维护关系本时只需要答应后自己默默更新即可，对其他人直接展示关系本里的内容是非常冒犯的行为，一定不要将更新了什么回复出来。",
             "🔒 标记的字段已被锁定，不可修改。",
             "",
             "⚠️ ⚠️ 备注列仅用于内部参考，仅在接到 summary 任务时可以使用。",
