@@ -1,0 +1,6 @@
+name: astrbot_plugin_Mikachiyo_relationship
+display_name: Mikachiyo关系本
+author: Mikachiyo
+version: v1.0.0
+desc: 将 AstrBot 人格中的人际关系表抽离为独立插件，支持 Dashboard 可视化编辑、LLM 工具自助维护，并在上下文压缩时自动注入 system prompt。
+repo: https://github.com/Mikachiyo/astrbot_plugin_Mikachiyo_relationship

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>关系本管理</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --text: #111827;
+      --muted: #6b7280;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    h1 { margin: 0 0 16px; font-size: 22px; }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .add-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    input[type="text"] {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      min-width: 140px;
+    }
+    button {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 6px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover { background: var(--primary-hover); }
+    button.secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover { background: #f3f4f6; }
+    button.delete-btn {
+      background: #dc2626;
+      color: #fff;
+      padding: 2px 8px;
+      font-size: 13px;
+      border-radius: 4px;
+    }
+    button.delete-btn:hover { background: #b91d1b; }
+    td.actions { white-space: nowrap; }
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    tr:hover { background: #fafafa; }
+    .cell {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      min-height: 24px;
+    }
+    .lock-btn {
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      line-height: 1.4;
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+    .lock-btn:hover { opacity: 1; }
+    .value {
+      flex: 1;
+      word-break: break-all;
+      white-space: pre-wrap;
+      line-height: 1.4;
+      cursor: text;
+      border-radius: 4px;
+      padding: 2px 4px;
+      margin: -2px -4px;
+    }
+    .value:hover { background: #f3f4f6; }
+    .value.empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+    .value.editing {
+      background: transparent;
+      cursor: default;
+    }
+    input.edit-input {
+      width: 100%;
+      padding: 4px 6px;
+      border: 1px solid var(--primary);
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+    }
+    .toast {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      background: #374151;
+      color: #fff;
+      font-size: 14px;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .toast.error { background: #dc2626; }
+    .toast.success { background: #16a34a; }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal.show { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px 24px;
+      max-width: 360px;
+      width: calc(100% - 32px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    .modal-box p {
+      margin: 0 0 16px;
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>关系本管理</h1>
+  <p class="hint">双击单元格即可编辑；点击 🔒/🔓 切换锁定状态（锁只阻止 AI 写入，不影响显示）。</p>
+
+  <div class="toolbar">
+    <div class="add-form">
+      <input id="newQq" type="text" placeholder="QQ号" />
+      <input id="newNickname" type="text" placeholder="昵称" />
+      <button id="addBtn">添加用户</button>
+    </div>
+    <button id="refreshBtn" class="secondary">刷新</button>
+    <button id="forceInjectBtn" class="secondary" title="强制刷新关系本注入，下次对话生效">强制刷新</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="relTable">
+      <thead>
+        <tr>
+          <th>QQ号</th>
+          <th>昵称</th>
+          <th>称呼(管理)</th>
+          <th>称呼(AI)</th>
+          <th>备注(管理)</th>
+          <th>备注(AI)</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="confirmModal" class="modal">
+    <div class="modal-box">
+      <p id="confirmMessage">确定删除？</p>
+      <div class="modal-actions">
+        <button id="confirmOk" class="delete-btn">确定</button>
+        <button id="confirmCancel" class="secondary">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    const bridge = window.AstrBotPluginPage;
+    await bridge.ready();
+
+    const toastEl = document.getElementById("toast");
+    let toastTimer = null;
+    function toast(message, type = "info") {
+      toastEl.textContent = message;
+      toastEl.className = `toast ${type} show`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2500);
+    }
+
+    const confirmModal = document.getElementById("confirmModal");
+    const confirmMessage = document.getElementById("confirmMessage");
+    const confirmOk = document.getElementById("confirmOk");
+    const confirmCancel = document.getElementById("confirmCancel");
+    function confirmAsync(message) {
+      return new Promise((resolve) => {
+        confirmMessage.textContent = message;
+        confirmModal.classList.add("show");
+        const cleanup = () => {
+          confirmModal.classList.remove("show");
+          confirmOk.removeEventListener("click", onOk);
+          confirmCancel.removeEventListener("click", onCancel);
+          confirmModal.removeEventListener("click", onBackdrop);
+        };
+        const onOk = () => { cleanup(); resolve(true); };
+        const onCancel = () => { cleanup(); resolve(false); };
+        const onBackdrop = (e) => {
+          if (e.target === confirmModal) { cleanup(); resolve(false); }
+        };
+        confirmOk.addEventListener("click", onOk);
+        confirmCancel.addEventListener("click", onCancel);
+        confirmModal.addEventListener("click", onBackdrop);
+      });
+    }
+
+    const fields = [
+      { key: "qq_id", label: "QQ号", editable: false },
+      { key: "nickname", label: "昵称", editable: true },
+      { key: "title_manual", label: "称呼(管理)", editable: true },
+      { key: "title_auto", label: "称呼(AI)", editable: true },
+      { key: "note_manual", label: "备注(管理)", editable: true },
+      { key: "note_auto", label: "备注(AI)", editable: true },
+    ];
+
+    async function loadData() {
+      try {
+        const resp = await bridge.apiGet("relationship");
+        if (!resp.success) {
+          throw new Error(resp.error || "加载失败");
+        }
+        render(resp.rows || []);
+      } catch (err) {
+        toast("加载失败：" + err.message, "error");
+      }
+    }
+
+    function render(rows) {
+      const tbody = document.querySelector("#relTable tbody");
+      tbody.innerHTML = "";
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${fields.length + 1}" style="text-align:center;color:var(--muted)">暂无数据</td></tr>`;
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        for (const field of fields) {
+          const td = document.createElement("td");
+          const locked = !!row.locks?.[field.key];
+          const rawValue = row[field.key] ?? "";
+          const displayValue = String(rawValue).trim();
+
+          const cell = document.createElement("div");
+          cell.className = "cell";
+
+          const lockBtn = document.createElement("span");
+          lockBtn.className = "lock-btn";
+          lockBtn.textContent = locked ? "🔒" : "🔓";
+          lockBtn.title = locked ? "已锁定，点击解锁" : "未锁定，点击锁定";
+          lockBtn.addEventListener("click", async () => {
+            try {
+              const resp = await bridge.apiPost("relationship/lock", {
+                qq_id: row.qq_id,
+                field: field.key,
+              });
+              if (resp.success) {
+                toast(resp.message, "success");
+                await loadData();
+              } else {
+                throw new Error(resp.error || "切换失败");
+              }
+            } catch (err) {
+              toast("切换锁失败：" + err.message, "error");
+            }
+          });
+
+          const valueSpan = document.createElement("span");
+          valueSpan.className = "value" + (displayValue ? "" : " empty");
+          valueSpan.textContent = displayValue || "（空）";
+
+          if (field.editable) {
+            valueSpan.addEventListener("dblclick", () => {
+              startEdit(td, valueSpan, row.qq_id, field.key, displayValue);
+            });
+          }
+
+          cell.appendChild(lockBtn);
+          cell.appendChild(valueSpan);
+          td.appendChild(cell);
+          tr.appendChild(td);
+        }
+
+        const actionTd = document.createElement("td");
+        actionTd.className = "actions";
+        const delBtn = document.createElement("button");
+        delBtn.className = "delete-btn";
+        delBtn.textContent = "✕";
+        delBtn.title = "删除该用户";
+        delBtn.addEventListener("click", async () => {
+          if (!(await confirmAsync(`确定删除 QQ号 ${row.qq_id} 吗？`))) return;
+          try {
+            const resp = await bridge.apiPost("relationship/delete", {
+              qq_id: row.qq_id,
+            });
+            if (resp.success) {
+              toast(resp.message, "success");
+              await loadData();
+            } else {
+              throw new Error(resp.error || "删除失败");
+            }
+          } catch (err) {
+            toast("删除失败：" + err.message, "error");
+          }
+        });
+        actionTd.appendChild(delBtn);
+        tr.appendChild(actionTd);
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    function startEdit(td, valueSpan, qqId, field, oldValue) {
+      if (td.querySelector(".edit-input")) return;
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "edit-input";
+      input.value = oldValue;
+
+      valueSpan.style.display = "none";
+      td.querySelector(".cell").appendChild(input);
+      input.focus();
+      input.select();
+
+      const finish = async () => {
+        const newValue = input.value.trim();
+        input.remove();
+        valueSpan.style.display = "";
+        if (newValue === oldValue) return;
+
+        try {
+          const resp = await bridge.apiPost("relationship/update", {
+            qq_id: qqId,
+            field: field,
+            value: newValue,
+          });
+          if (resp.success) {
+            toast(resp.message, "success");
+            await loadData();
+          } else {
+            throw new Error(resp.error || "保存失败");
+          }
+        } catch (err) {
+          toast("保存失败：" + err.message, "error");
+        }
+      };
+
+      input.addEventListener("blur", finish);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          input.blur();
+        } else if (e.key === "Escape") {
+          input.value = oldValue;
+          input.blur();
+        }
+      });
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", loadData);
+
+    document.getElementById("forceInjectBtn").addEventListener("click", async () => {
+      try {
+        const resp = await bridge.apiPost("relationship/force_inject", {});
+        if (resp.success) {
+          toast(resp.message, "success");
+        } else {
+          throw new Error(resp.error || "刷新失败");
+        }
+      } catch (err) {
+        toast("刷新失败：" + err.message, "error");
+      }
+    });
+
+    document.getElementById("addBtn").addEventListener("click", async () => {
+      const qqInput = document.getElementById("newQq");
+      const nickInput = document.getElementById("newNickname");
+      const qqId = qqInput.value.trim();
+      const nickname = nickInput.value.trim();
+      if (!qqId) {
+        toast("QQ号不能为空", "error");
+        return;
+      }
+      try {
+        const resp = await bridge.apiPost("relationship/add", {
+          qq_id: qqId,
+          nickname: nickname,
+        });
+        if (resp.success) {
+          toast(resp.message, "success");
+          qqInput.value = "";
+          nickInput.value = "";
+          await loadData();
+        } else {
+          throw new Error(resp.error || "添加失败");
+        }
+      } catch (err) {
+        toast("添加失败：" + err.message, "error");
+      }
+    });
+
+    await loadData();
+  </script>
+</body>
+</html>
